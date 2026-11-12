@@ -23,6 +23,12 @@ def main():
     parser.add_argument("--embed-dim", type=int, default=256)
     parser.add_argument("--max-length", type=int, default=77)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+    "--resume",
+    type=str,
+    default=None,
+    help="Path to checkpoint for resuming training"
+)
     args = parser.parse_args()
 
     if args.batch_size < 2:
@@ -54,8 +60,30 @@ def main():
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     best_score = -1.0
+    start_epoch = 1
 
-    for epoch in range(1, args.epochs + 1):
+    if args.resume:
+        checkpoint = torch.load(
+            args.resume,
+            map_location=device,
+            weights_only=True
+        )
+
+        model.load_state_dict(checkpoint["model"])
+
+        start_epoch = checkpoint["epoch"] + 1
+
+        metrics = checkpoint["metrics"]
+        best_score = (
+            metrics["I2T_R@1"] + metrics["T2I_R@1"]
+        ) / 2
+
+        if "optimizer" in checkpoint:
+            optimizer.load_state_dict(checkpoint["optimizer"])
+
+        print(f"继续训练，从 Epoch {start_epoch} 开始")
+
+    for epoch in range(start_epoch, start_epoch + args.epochs):
         model.train()
         # Keep frozen ResNet batchnorm statistics and text dropout unchanged.
         model.image_encoder.eval()
@@ -83,12 +111,13 @@ def main():
         if score > best_score:
             best_score = score
             torch.save({
-                "model": model.state_dict(),
-                "embed_dim": args.embed_dim,
-                "max_length": args.max_length,
-                "epoch": epoch,
-                "metrics": metrics,
-            }, output)
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "embed_dim": args.embed_dim,
+            "max_length": args.max_length,
+            "epoch": epoch,
+            "metrics": metrics,
+        }, output)
             print(f"Saved best checkpoint: {output}")
 
 
