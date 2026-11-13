@@ -1,4 +1,5 @@
 
+import argparse
 import json
 import random
 from pathlib import Path
@@ -20,7 +21,13 @@ from peft import (
 # ========== 1. 配置 ==========
 MODEL_NAME = "Qwen/Qwen3-VL-2B-Instruct"
 TRAIN_FILE = "data/multitask/train.jsonl"
-OUTPUT_DIR = Path("checkpoints/qwen3_vl_lora_docvqa_300")
+
+parser = argparse.ArgumentParser(description="DocVQA QLoRA rank ablation training")
+parser.add_argument("--rank", type=int, default=8, choices=[4, 8, 16])
+args = parser.parse_args()
+RANK = args.rank
+ALPHA = RANK * 2
+OUTPUT_DIR = Path(f"checkpoints/qwen3_vl_docvqa_r{RANK}")
 
 SEED = 42
 SMOKE_TEST = False
@@ -42,6 +49,7 @@ with open(TRAIN_FILE, "r", encoding="utf-8") as f:
 
 samples = samples[:MAX_SAMPLES]
 print(f"Training samples: {len(samples)}")
+print(f"LoRA rank={RANK}, alpha={ALPHA}, output={OUTPUT_DIR}")
 
 # ========== 3. 加载 4-bit Qwen3-VL ==========
 quant_config = BitsAndBytesConfig(
@@ -83,8 +91,8 @@ if not target_names:
 print(f"LoRA target modules: {len(target_names)}")
 
 lora_config = LoraConfig(
-    r=8,
-    lora_alpha=16,
+    r=RANK,
+    lora_alpha=ALPHA,
     lora_dropout=0.05,
     target_modules=target_names,
     bias="none",
