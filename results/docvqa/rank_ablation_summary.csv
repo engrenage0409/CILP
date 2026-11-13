@@ -1,0 +1,5 @@
+model,rank,alpha,exact_match_pct,anls_pct,epoch_mean_train_loss,optimizer_updates,train_peak_allocated_vram_gb,eval_peak_allocated_vram_gb,val_samples,notes
+baseline,,,64.00,78.97,,,,,50,historical unadapted baseline
+qlora_r4,4,8,68.00,77.91,0.3932,38,4.02,1.65,50,user-reported 2026-11-13
+qlora_r8,8,16,68.00,77.91,0.3783,38,4.03,1.65,50,user-reported rerun 2026-11-13
+qlora_r16,16,32,66.00,77.89,0.3655,38,4.05,1.66,50,user-reported 2026-11-13
