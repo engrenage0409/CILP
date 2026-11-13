@@ -1,4 +1,5 @@
 
+import argparse
 import json
 import csv
 import re
@@ -16,7 +17,20 @@ from transformers import (
 # ========== 1. 配置 ==========
 MODEL_NAME = "Qwen/Qwen3-VL-2B-Instruct"
 VAL_FILE = Path("data/multitask/val.jsonl")
+
+parser = argparse.ArgumentParser(description="Evaluate Qwen3-VL DocVQA LoRA adapter")
+parser.add_argument(
+    "--adapter-path",
+    type=Path,
+    default=Path("checkpoints/qwen3_vl_lora_docvqa_300"),
+    help="Existing LoRA adapter directory",
+)
+args = parser.parse_args()
+ADAPTER_PATH = args.adapter_path
+if not ADAPTER_PATH.is_dir():
+    raise FileNotFoundError(f"Adapter directory not found: {ADAPTER_PATH}")
 OUTPUT_DIR = Path("results/docvqa")
+OUTPUT_CSV = OUTPUT_DIR / f"{ADAPTER_PATH.name}_predictions.csv"
 
 MAX_NEW_TOKENS = 64
 MAX_IMAGE_SIZE = 768
@@ -52,7 +66,7 @@ model = AutoModelForMultimodalLM.from_pretrained(
 
 model = PeftModel.from_pretrained(
     model,
-    "checkpoints/qwen3_vl_lora_docvqa_300",
+    str(ADAPTER_PATH),
     is_trainable=False,
 )
 
@@ -185,7 +199,7 @@ results = []
 total_em = 0.0
 total_anls = 0.0
 
-for sample in tqdm(samples, desc="DocVQA Baseline"):
+for sample in tqdm(samples, desc=f"DocVQA {ADAPTER_PATH.name}"):
     prediction = predict(sample)
 
     references = sample.get(
@@ -219,7 +233,7 @@ if n == 0:
 mean_em = total_em / n * 100
 mean_anls = total_anls / n * 100
 
-output_csv = OUTPUT_DIR / "finetuned_predictions.csv"
+output_csv = OUTPUT_CSV
 
 with output_csv.open(
     "w", newline="", encoding="utf-8-sig"
@@ -230,7 +244,7 @@ with output_csv.open(
     writer.writeheader()
     writer.writerows(results)
 
-print("\n===== DocVQA BASELINE =====")
+print(f"\n===== DocVQA ADAPTER: {ADAPTER_PATH} =====")
 print(f"Exact Match: {mean_em:.2f}%")
 print(f"ANLS: {mean_anls:.2f}%")
 print(f"Peak VRAM: {torch.cuda.max_memory_allocated()/1024**3:.2f} GB")
