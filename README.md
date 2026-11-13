@@ -1,6 +1,6 @@
-# CILP — CLIP-style Vision–Language Alignment & Fine-tuning
+# CILP — Vision–Language Alignment, Qwen3-VL QLoRA & Evaluation
 
-**An end-to-end image–text retrieval project:** build a CLIP-style dual encoder, evaluate pretrained OpenAI CLIP, adapt it on Flickr8k under an 8 GB GPU constraint, and visualize retrieval behavior.
+**Two complementary experiments on an 8 GB GPU:** (1) CLIP-style image–text representation alignment and retrieval on Flickr8k; (2) Qwen3-VL-2B-Instruct 4-bit QLoRA instruction tuning for document VQA and an earlier image captioning experiment. Includes quantitative evaluation, error analysis, and a controlled single-run LoRA rank sweep.
 
 > **Best held-out test result (single-caption protocol):** Image→Text R@1 **59.90%** (+2.60 percentage points); Text→Image R@1 **58.10%** (+3.50 percentage points) compared with the original CLIP ViT-B/32.
 
@@ -13,6 +13,9 @@
 - **Lightweight adaptation:** froze **both** CLIP vision and text encoders; trained the existing image projection, text projection, and `logit_scale` using BF16 autocast. The final checked-in script does **not** unfreeze any Transformer blocks.
 - **Honest evaluation:** disjoint Flickr8k splits, one caption per image, bidirectional Recall@1/5, final comparison on a separate test split.
 - **Visual diagnostics:** training curves, baseline comparison, similarity/difference heatmaps, and Top-5 retrieval examples.
+- **Qwen3-VL QLoRA:** 4-bit NF4 model, train LoRA on language-model Q/V projections, assistant-only label masking, gradient checkpointing and accumulation; 300 DocVQA training samples.
+- **DocVQA rank sweep:** r=4/8/16 with alpha=2r; same 50-example validation subset, reporting EM, ANLS, training loss and peak allocated VRAM.
+- **Caption diagnostics:** BLEU-4, ROUGE-L, CLIP-based similarity, response-length and per-example analyses from the earlier caption-focused adapter.
 
 ## Results
 
@@ -58,6 +61,71 @@ Five-epoch run, learning rate `1e-6`, batch size `16`:
 | CLIP, 1-epoch run at LR `1e-6`, batch 16 | 58.80% | 86.20% | 56.70% | 82.80% |
 
 These are experiment observations, not proof that learning rate or batch size alone caused the differences. For controlled comparisons, fix trainable modules, random seeds, data ordering, and the number of optimizer updates; repeat across multiple seeds.
+
+## Qwen3-VL: document VQA and image captioning
+
+### Model and fine-tuning setup
+
+- **Base model:** `Qwen/Qwen3-VL-2B-Instruct` loaded in **4-bit NF4** with double quantization and BF16 compute on an NVIDIA RTX 5060 (8 GB).
+- **DocVQA training:** `prepare_docvqa.py` uses `nielsr/docvqa_1200_examples`, selects 300 training and 50 held-out validation examples from its train split (seed 42); this is an **internal split, not an official DocVQA benchmark/test score**.
+- **LoRA targets:** language-model `q_proj` and `v_proj` layers; rank r∈{4, 8, 16}, alpha=2r, dropout=0.05.
+- **Training:** one epoch, 300 samples, per-step microbatch 1, gradient accumulation 8, 38 optimizer updates, AdamW learning rate 1e-4. The training script masks prompt/image/user tokens in `labels` and optimizes assistant answer tokens only.
+- **Evaluation:** 50-question validation subset, deterministic decoding and multi-reference normalized Exact Match (EM) / Average Normalized Levenshtein Similarity (ANLS). Different metrics can disagree; EM counts exact accepted answers while ANLS also rewards certain near-matches.
+
+### DocVQA LoRA rank ablation
+
+| Metric | Unadapted baseline | Rank 4 | Rank 8 (rerun) | Rank 16 |
+|:--|--:|--:|--:|--:|
+| Exact Match (50 examples) | 64.00% | **68.00%** | **68.00%** | 66.00% |
+| ANLS | **78.97%** | 77.91% | 77.91% | 77.89% |
+| Epoch mean training loss | — | 0.3932 | 0.3783 | **0.3655** |
+| Peak allocated training VRAM (GB) | — | 4.02 | 4.03 | 4.05 |
+| Peak allocated evaluation VRAM (GB) | — | 1.65 | 1.65 | 1.66 |
+
+Values were recorded from **user-run experiments on November 13, 2026**; these newly reported rank-sweep prediction CSVs and adapters are not yet committed. This table records **one training seed / one 50-example validation subset**, not statistical evidence that one rank consistently outperforms another. One EM item moves the score by 2 percentage points. The r=4 and r=8 runs tie in EM and ANLS; r=16 has lower training loss but no validation improvement. All tuned variants have lower ANLS than the unadapted baseline.
+
+Rank-sweep summary: [`results/docvqa/rank_ablation_summary.csv`](results/docvqa/rank_ablation_summary.csv). Earlier r=8 results (EM 66.00%, ANLS 75.91%) came from a different historical run and are **not** used as the controlled r=8 row above.
+
+The earlier error-comparison script `compare_docvqa.py` compares `results/docvqa/baseline_predictions.csv` with `finetuned_predictions.csv` and recorded 2 improved, 5 regressed, 43 unchanged by ANLS, for that **earlier adapter**. Do not confuse those pairwise counts with the new rank sweep.
+
+### Image-caption generation evaluation (earlier adapter)
+
+Separate image-caption experiments used `evaluate_qlora.py`, `analyze_qlora.py`, `analyze_errors.py`, and `evaluate_clipscore.py`. The checked-in caption evaluation script points to `checkpoints/qwen3_vl_lora_200`, **not** the newer 300-sample DocVQA rank-sweep adapters.
+
+| Metric | Baseline | Fine-tuned | Change |
+|:--|--:|--:|--:|
+| Caption BLEU-4 (original prompt) | 1.6556 | 6.6534 | +4.9979 |
+| Caption ROUGE-L (original prompt) | 18.1215 | 37.9750 | +19.8535 |
+| Caption BLEU-4 (short-answer prompt) | 4.3192 | 8.5844 | +4.2652 |
+| Caption ROUGE-L (short-answer prompt) | 33.4386 | 38.1584 | +4.7199 |
+
+These are **50-sample caption experiments**, with changes measured in score points, not percentage-point gains in accuracy. Reference-overlap metrics are affected by response length and prompt constraints; improvements do not automatically establish better factual grounding. The script named `evaluate_clipscore.py` computes a scaled CLIP cosine similarity as a diagnostic, not a separately validated faithful-captioning accuracy measure. Per-example results and caption lengths are in `results/qlora_*.csv`.
+
+### Reproduce DocVQA training and evaluation
+
+Prepare the internal DocVQA split (downloads external data; images and JSONL are not committed):
+
+```powershell
+python prepare_docvqa.py
+```
+
+The `train_qlora.py` script currently supports ranks 4, 8, and 16; each gets its own adapter directory:
+
+```powershell
+python train_qlora.py --rank 4
+python train_qlora.py --rank 8
+python train_qlora.py --rank 16
+```
+
+Evaluate each adapter, generating separate prediction CSVs:
+
+```powershell
+python evaluate_docvqa.py --adapter-path checkpoints/qwen3_vl_docvqa_r4
+python evaluate_docvqa.py --adapter-path checkpoints/qwen3_vl_docvqa_r8
+python evaluate_docvqa.py --adapter-path checkpoints/qwen3_vl_docvqa_r16
+```
+
+Local outputs: `results/docvqa/qwen3_vl_docvqa_r{4,8,16}_predictions.csv`. The existing `compare_docvqa.py` defaults to old prediction-file names and must be adapted if comparing new rank-sweep predictions. The repository deliberately excludes `data/`, `images/`, and `checkpoints/` from Git. QLoRA requires compatible CUDA/PyTorch/Transformers/PEFT/bitsandbytes versions in addition to the minimal CLIP requirements; no fully pinned QLoRA environment is currently provided.
 
 ## Retrieval visualizations
 
@@ -132,15 +200,26 @@ CILP/
 ├── finetune_clip.py          # Pretrained CLIP projection-head adaptation
 ├── test_clip.py              # Held-out original vs fine-tuned evaluation
 ├── visualize_clip.py         # Curves, comparisons, heatmaps, top-5 retrieval
+├── prepare_docvqa.py         # DocVQA 300/50 split and JSONL
+├── train_qlora.py            # Qwen3-VL 4-bit LoRA training; --rank 4/8/16
+├── evaluate_docvqa.py        # DocVQA EM/ANLS; --adapter-path
+├── compare_docvqa.py         # Historical DocVQA error comparison
+├── prepare_sft_data.py       # Earlier Flickr8k caption SFT data
+├── evaluate_qlora.py         # Caption evaluation with historical adapter
+├── analyze_qlora.py          # Caption response-length analysis
+├── analyze_errors.py         # Caption CLIP-based error analysis
+├── evaluate_clipscore.py     # Caption CLIP cosine-similarity diagnostic
 ├── examples/pairs.csv        # CSV schema example (not image data)
 ├── results/
 │   ├── clip_baseline.csv
-│   └── final_test.csv
+│   ├── final_test.csv
+│   ├── docvqa/              # Earlier predictions + rank summary
+│   └── qlora_*.csv          # Caption metrics, predictions, diagnostics
 ├── assets/                   # README visualization PNGs
 └── requirements.txt
 ```
 
-The full Flickr8k image data and trained checkpoint are not committed; prepare/download them locally. The `assets/` and reported CSV files **are** present in the repository.
+The full Flickr8k/DocVQA image datasets and trained model checkpoints/adapters are not committed; prepare/download them locally. Reported historical CSVs and retrieval visualizations **are** committed. Newly run rank-sweep per-example predictions still need to be pushed from the experiment machine.
 
 ## Reproduce
 
@@ -203,7 +282,10 @@ python visualize_clip.py
 - Add experiment-config, metrics-CSV, and checkpoint version tracking rather than manually entering historical curves.
 - Optimize or chunk large `N × N` retrieval similarity calculations for bigger datasets.
 - Explore LoRA / partial encoder adaptation and more diverse image–text datasets.
-- Extend to generative VLM instruction tuning (e.g., Qwen-VL) as a separate phase.
+- Qwen3-VL instruction tuning is now implemented; validate on larger held-out splits and multiple seeds before claiming a reliable rank winner.
+- Commit the three new local rank-sweep prediction CSVs after reviewing them; this README already records the reported aggregate results.
+- Add pinned QLoRA dependencies and environment details for exact reproducibility.
+- Future projects beyond this repository: visual grounding, domain-specific industrial-document VLM experiments, agent harness, and action-conditioned world models.
 
 ## License and data
 
