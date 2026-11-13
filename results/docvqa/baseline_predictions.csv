@@ -1,0 +1,51 @@
+﻿image,question,reference,prediction,em,anls
+D:\GH\CILP\data\multitask\images\val_00031.jpg,How much percent had not noticed any difference in the odor of VSSS,Over Fifty percent,Over fifty percent had not noticed any difference in the odor of VSSS.,0.0,0.0
+D:\GH\CILP\data\multitask\images\val_00579.jpg,what is the date mentioned in this invoice?,"June 24, 2016","June 24, 2016",1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00404.jpg,What plan is developed by TPNA?,TPNA will develop monitoring plan.,The plan developed by TPNA is to investigate the feasibility and scientific merit of a clinical monitoring plan.,0.0,0.0
+D:\GH\CILP\data\multitask\images\val_00277.jpg,When was the hearing before Judge?,"July 25, 2013","July 25, 2013",1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00444.jpg,what is the name of pediatric program?,ACTOS,ACTOS Pediatric Program,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00771.jpg,what should be able to be modified-expanded or contracted ?,low priority designations,Low priority designations,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00372.jpg,To whom this letter is addressed?,MPDRAP I Leader,MDPRAP I Leader,0.0,0.8666666666666667
+D:\GH\CILP\data\multitask\images\val_00722.jpg,What is the subject line of this letter?,Re:    NRDC Comments on the OMB Proposed Risk Assessment Bulletin,NRDC Comments on the OMB Proposed Risk Assessment Bulletin,0.0,0.935483870967742
+D:\GH\CILP\data\multitask\images\val_00400.jpg,By when will the document be finalized?,August 26,August 26,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00078.jpg,To whom is this letter addressed?,R.Ferguson,R. Ferguson,0.0,0.9090909090909091
+D:\GH\CILP\data\multitask\images\val_00537.jpg,What is the name of the President of BOARD OF TRUSTEES?,Michael Leonard Dourson,Michael Leonard Dourson,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00575.jpg,what is the P&B score for persistent and bioaccumulative,5,5,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00548.jpg,How many scientists from multiple international organizations are invited?,over 300 scientists,over 300,0.0,0.0
+D:\GH\CILP\data\multitask\images\val_00710.jpg,"Under which section, EPA carries out risk evaluation?",section 6,Section 26(h),0.0,0.6923076923076923
+D:\GH\CILP\data\multitask\images\val_00041.jpg,What is the Best Prototype mentioned?,327391,327391,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00885.jpg,Sugar Company Executives Meet whom?,community leaders,Community Leaders,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00632.jpg,When is the Workshop?,19-20 July 2017,19-20 July 2017,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00858.jpg,Who has signed this letter?,Jack O'Connell,Jack O'Connell,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00139.jpg,In which year diet coke was introduced in United States?,1982,1982,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00385.jpg,"Why was it suggested to prepare non-clinical ""White paper""?",to address the bladder issue,To address the bladder issue.,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00456.jpg,What is the royalty adjustment if generic enters the market ?,50%,25%,0.0,0.0
+D:\GH\CILP\data\multitask\images\val_00932.jpg,"Which association sponsored the symposium on ""Sugar in nutrition"" ?",Chicago Nutrition Association,Chicago Nutrition Association,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00813.jpg,Where was the Phoenix Musical Theatre Guild's annual holiday luncheon held?,Phoenix Country Club,The Phoenix Musical Theatre Guild's annual holiday luncheon was held at the Phoenix Theatre.,0.0,0.0
+D:\GH\CILP\data\multitask\images\val_00140.jpg,what is the name of the food institute?,American Frozen food Institute,American Frozen Food Institute,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00624.jpg,What is the Imminent Action Commercial of Ohio?,60,60,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00320.jpg,What is the Tax ID mentioned in this document?,34-0714585,34-0714585,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00708.jpg,"On what basis, an initial screening approach for chemical prioritization is done?",based upon consistent application of specific hazard and exposure science elements that define risk potential,"Based on consistent application of specific hazard and exposure science elements that define risk potential, the initial screening approach for chemical prioritization is done.",0.0,0.6022727272727273
+D:\GH\CILP\data\multitask\images\val_00457.jpg,what is the promotional trails data usage  for( Lilly in exclusive) ?,Split of 70/30 (Lilly in Exclusive),50/50,0.0,0.0
+D:\GH\CILP\data\multitask\images\val_00873.jpg,Who has signed this letter?,A. E. Omdahl,A. E. Omdahl,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00326.jpg,When did Regulatory affairs department receive this letter?,JUN 16 2003,JUN 16 2003,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00126.jpg,Who has written the comments?,Michael f. brown and richard l. frank,Michael F. Brown and Richard L. Frank,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00132.jpg,What is the increase in net operating revenues as part of favorable impact of currency fluctuations?,by approximately 2 percent.,approximately 2 percent,0.0,0.8518518518518519
+D:\GH\CILP\data\multitask\images\val_00817.jpg,Great western sugar company sales department room number is,514,514,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00397.jpg,Who updated the CEO on August 6?,Mr. Saito,Mr. Saito,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00915.jpg,By whom is this document inspired?,the Brilliant '68 Fords!,the brilliant '68 Fords!,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00993.jpg,"what is the domestic Raw sugar price at new york spot on sept.30,1977?",$ 9.60,$3.82,0.0,0.0
+D:\GH\CILP\data\multitask\images\val_00415.jpg,what kind of drug is used to treat the group of rats?,Pioglitazone,pioglitazone,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00595.jpg,What happens if enough flammable gas is produced ?,"the battery casing can fail releasing the gas, which can potentially ignited surrounding materials and cause a fire.","the battery casing can fail releasing the gas, which can potentially ignited surrounding materials and cause a fire",0.0,0.9913793103448276
+D:\GH\CILP\data\multitask\images\val_00258.jpg,Heading of the document?,Draft Agenda,Draft Agenda,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00313.jpg,What is written in big bold letters at the bottom?,DALY 19,Confidential - Subject to Protective Order,0.0,0.0
+D:\GH\CILP\data\multitask\images\val_00409.jpg,What is Ms Wakamatsu's role in Dept. Strategic Development?,Assistant manager,Assistant Manager,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00162.jpg,"who is the chairman of the council on children, media and merchandising?",Robert Choate,Robert Choate,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00304.jpg,By whom is this document written?,Kunio Iwatani,Upjohn Matter,0.0,0.0
+D:\GH\CILP\data\multitask\images\val_00286.jpg,What kind of a letter is  this ?,DISCIPLINE REVIEW LETTER,DISCIPLINE REVIEW LETTER,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00644.jpg,What is the fullform of ICR?,Information Collection Request,Information Collection Request,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00635.jpg,Who must propose a designation of a chemical as a high or low priority?,EPA,EPA,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00353.jpg,what is Ref: code  mentioned ?,TPNA-TS-020808,TPNA-TS-020808,1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00068.jpg,What is the date mentioned?,"June 19, 1990","June 19, 1990",1.0,1.0
+D:\GH\CILP\data\multitask\images\val_00678.jpg,The authors wife is a sole proprietor of which firm?,her law firm,"Martha C. Dourson, LLC",0.0,0.9565217391304348
+D:\GH\CILP\data\multitask\images\val_00833.jpg,When was the Mountain State Annual Meeting held?,"Monday, November 24, 1975","November 24, 1975",0.0,0.6799999999999999

@@ -1,0 +1,3 @@
+Metric,Baseline,Fine-tuned,Change
+BLEU-4,1.6556,6.6534,4.9979
+ROUGE-L,18.1215,37.975,19.8535
