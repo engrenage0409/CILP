@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 # 之前的 CLIP 项目路径
-CLIP_DIR = Path("D:/GH/CILP")
+CLIP_DIR = Path.cwd()  # Run with: python -m experiments.vlm.prepare_sft_data from repo root
 
 OUTPUT_DIR = Path("data")
 OUTPUT_DIR.mkdir(exist_ok=True)

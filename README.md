@@ -6,6 +6,48 @@
 
 ![Original vs fine-tuned CLIP test results](assets/baseline_vs_finetuned.png)
 
+## Quickstart and script guide
+
+**Always run commands from the repository root** (the directory containing `README.md`). Scripts live under `experiments/`, and root-relative paths such as `data/`, `images/`, `results/` and `checkpoints/` stay unchanged. Use `python -m` rather than executing a nested script by filename, so the top-level `clip_align` imports resolve correctly.
+
+| Task | Command | Output |
+|---|---|---|
+| Prepare Flickr8k (CLIP) | `python -m experiments.clip.prepare_data` | `data/{train,val,test}.csv`, `images/` |
+| Train teaching dual encoder | `python -m experiments.clip.train --train-csv data/train.csv --val-csv data/val.csv --image-dir images --batch-size 4 --epochs 5` | `checkpoints/best.pt` |
+| Evaluate teaching dual encoder | `python -m experiments.clip.evaluate --checkpoint checkpoints/best.pt --val-csv data/test.csv --image-dir images` | retrieval metrics |
+| CLIP zero-shot validation | `python -m experiments.clip.clip_baseline` | `results/clip_baseline.csv` |
+| Fine-tune pretrained CLIP | `python -m experiments.clip.finetune_clip` | `checkpoints/clip_finetune/best/` |
+| CLIP held-out test | `python -m experiments.clip.test_clip` | `results/final_test.csv` |
+| CLIP plots | `python -m experiments.clip.visualize_clip` | `results/visualization/` |
+| Prepare DocVQA | `python -m experiments.vlm.prepare_docvqa` | `data/multitask/{train,val}.jsonl` and images |
+| Qwen3-VL QLoRA rank sweep | `python -m experiments.vlm.train_qlora --rank 4` | `checkpoints/qwen3_vl_docvqa_r4/` |
+| Evaluate selected adapter | `python -m experiments.vlm.evaluate_docvqa --adapter-path checkpoints/qwen3_vl_docvqa_r4` | `results/docvqa/qwen3_vl_docvqa_r4_predictions.csv` |
+| Compare old DocVQA predictions | `python -m experiments.analysis.compare_docvqa` | console error analysis |
+| Earlier caption SFT data | `python -m experiments.vlm.prepare_sft_data` | `data/{train,val}.jsonl` |
+| Earlier caption evaluation | `python -m experiments.vlm.evaluate_qlora` | `results/qlora_*_short.csv` |
+| Caption length / CLIP diagnostics | `python -m experiments.analysis.analyze_qlora` and `python -m experiments.analysis.evaluate_clipscore` | `results/qlora_*.csv` |
+
+**Dependency note:** `requirements.txt` reflects the minimal CLIP setup, not a fully pinned QLoRA environment. VLM tasks additionally need compatible CUDA PyTorch, Transformers, PEFT, bitsandbytes, datasets, PIL, sacrebleu, and rouge-score. `evaluate_qlora` uses the historical caption adapter path, while `evaluate_docvqa` accepts any existing DocVQA adapter via `--adapter-path`. Keep these experiments separate.
+
+### Source tree
+
+```text
+CILP/
+├── clip_align/                # Shared teaching dual-encoder package
+│   ├── model.py
+│   ├── data.py
+│   └── evaluation.py
+├── experiments/
+│   ├── clip/                  # Flickr8k alignment, retrieval, CLIP fine-tuning
+│   ├── vlm/                   # Qwen3-VL training, DocVQA, captioning
+│   └── analysis/              # Error, length, CLIP similarity diagnostics
+├── assets/                    # Visualizations embedded in README
+├── results/                   # Checked-in metrics and predictions
+├── examples/
+├── README.md
+└── requirements.txt
+```
+
 ## Highlights
 
 - **From independently pretrained encoders:** ResNet18 + DistilBERT, separate trainable linear projection heads, L2-normalized embeddings, learned logit scale, symmetric image–text InfoNCE.
@@ -67,7 +109,7 @@ These are experiment observations, not proof that learning rate or batch size al
 ### Model and fine-tuning setup
 
 - **Base model:** `Qwen/Qwen3-VL-2B-Instruct` loaded in **4-bit NF4** with double quantization and BF16 compute on an NVIDIA RTX 5060 (8 GB).
-- **DocVQA training:** `prepare_docvqa.py` uses `nielsr/docvqa_1200_examples`, selects 300 training and 50 held-out validation examples from its train split (seed 42); this is an **internal split, not an official DocVQA benchmark/test score**.
+- **DocVQA training:** `experiments/vlm/prepare_docvqa.py` uses `nielsr/docvqa_1200_examples`, selects 300 training and 50 held-out validation examples from its train split (seed 42); this is an **internal split, not an official DocVQA benchmark/test score**.
 - **LoRA targets:** language-model `q_proj` and `v_proj` layers; rank r∈{4, 8, 16}, alpha=2r, dropout=0.05.
 - **Training:** one epoch, 300 samples, per-step microbatch 1, gradient accumulation 8, 38 optimizer updates, AdamW learning rate 1e-4. The training script masks prompt/image/user tokens in `labels` and optimizes assistant answer tokens only.
 - **Evaluation:** 50-question validation subset, deterministic decoding and multi-reference normalized Exact Match (EM) / Average Normalized Levenshtein Similarity (ANLS). Different metrics can disagree; EM counts exact accepted answers while ANLS also rewards certain near-matches.
@@ -86,11 +128,11 @@ Values were recorded from **user-run experiments on November 13, 2026**; these n
 
 Rank-sweep summary: [`results/docvqa/rank_ablation_summary.csv`](results/docvqa/rank_ablation_summary.csv). Earlier r=8 results (EM 66.00%, ANLS 75.91%) came from a different historical run and are **not** used as the controlled r=8 row above.
 
-The earlier error-comparison script `compare_docvqa.py` compares `results/docvqa/baseline_predictions.csv` with `finetuned_predictions.csv` and recorded 2 improved, 5 regressed, 43 unchanged by ANLS, for that **earlier adapter**. Do not confuse those pairwise counts with the new rank sweep.
+The earlier error-comparison script `experiments/analysis/compare_docvqa.py` compares `results/docvqa/baseline_predictions.csv` with `finetuned_predictions.csv` and recorded 2 improved, 5 regressed, 43 unchanged by ANLS, for that **earlier adapter**. Do not confuse those pairwise counts with the new rank sweep.
 
 ### Image-caption generation evaluation (earlier adapter)
 
-Separate image-caption experiments used `evaluate_qlora.py`, `analyze_qlora.py`, `analyze_errors.py`, and `evaluate_clipscore.py`. The checked-in caption evaluation script points to `checkpoints/qwen3_vl_lora_200`, **not** the newer 300-sample DocVQA rank-sweep adapters.
+Separate image-caption experiments used `experiments/vlm/evaluate_qlora.py`, `experiments/analysis/analyze_qlora.py`, `experiments/analysis/analyze_errors.py`, and `experiments/analysis/evaluate_clipscore.py`. The checked-in caption evaluation script points to `checkpoints/qwen3_vl_lora_200`, **not** the newer 300-sample DocVQA rank-sweep adapters.
 
 | Metric | Baseline | Fine-tuned | Change |
 |:--|--:|--:|--:|
@@ -99,33 +141,33 @@ Separate image-caption experiments used `evaluate_qlora.py`, `analyze_qlora.py`,
 | Caption BLEU-4 (short-answer prompt) | 4.3192 | 8.5844 | +4.2652 |
 | Caption ROUGE-L (short-answer prompt) | 33.4386 | 38.1584 | +4.7199 |
 
-These are **50-sample caption experiments**, with changes measured in score points, not percentage-point gains in accuracy. Reference-overlap metrics are affected by response length and prompt constraints; improvements do not automatically establish better factual grounding. The script named `evaluate_clipscore.py` computes a scaled CLIP cosine similarity as a diagnostic, not a separately validated faithful-captioning accuracy measure. Per-example results and caption lengths are in `results/qlora_*.csv`.
+These are **50-sample caption experiments**, with changes measured in score points, not percentage-point gains in accuracy. Reference-overlap metrics are affected by response length and prompt constraints; improvements do not automatically establish better factual grounding. The script named `experiments/analysis/evaluate_clipscore.py` computes a scaled CLIP cosine similarity as a diagnostic, not a separately validated faithful-captioning accuracy measure. Per-example results and caption lengths are in `results/qlora_*.csv`.
 
 ### Reproduce DocVQA training and evaluation
 
 Prepare the internal DocVQA split (downloads external data; images and JSONL are not committed):
 
 ```powershell
-python prepare_docvqa.py
+python -m experiments.vlm.prepare_docvqa
 ```
 
-The `train_qlora.py` script currently supports ranks 4, 8, and 16; each gets its own adapter directory:
+The `experiments/vlm/train_qlora.py` script currently supports ranks 4, 8, and 16; each gets its own adapter directory:
 
 ```powershell
-python train_qlora.py --rank 4
-python train_qlora.py --rank 8
-python train_qlora.py --rank 16
+python -m experiments.vlm.train_qlora --rank 4
+python -m experiments.vlm.train_qlora --rank 8
+python -m experiments.vlm.train_qlora --rank 16
 ```
 
 Evaluate each adapter, generating separate prediction CSVs:
 
 ```powershell
-python evaluate_docvqa.py --adapter-path checkpoints/qwen3_vl_docvqa_r4
-python evaluate_docvqa.py --adapter-path checkpoints/qwen3_vl_docvqa_r8
-python evaluate_docvqa.py --adapter-path checkpoints/qwen3_vl_docvqa_r16
+python -m experiments.vlm.evaluate_docvqa --adapter-path checkpoints/qwen3_vl_docvqa_r4
+python -m experiments.vlm.evaluate_docvqa --adapter-path checkpoints/qwen3_vl_docvqa_r8
+python -m experiments.vlm.evaluate_docvqa --adapter-path checkpoints/qwen3_vl_docvqa_r16
 ```
 
-Local outputs: `results/docvqa/qwen3_vl_docvqa_r{4,8,16}_predictions.csv`. The existing `compare_docvqa.py` defaults to old prediction-file names and must be adapted if comparing new rank-sweep predictions. The repository deliberately excludes `data/`, `images/`, and `checkpoints/` from Git. QLoRA requires compatible CUDA/PyTorch/Transformers/PEFT/bitsandbytes versions in addition to the minimal CLIP requirements; no fully pinned QLoRA environment is currently provided.
+Local outputs: `results/docvqa/qwen3_vl_docvqa_r{4,8,16}_predictions.csv`. The existing `experiments/analysis/compare_docvqa.py` defaults to old prediction-file names and must be adapted if comparing new rank-sweep predictions. The repository deliberately excludes `data/`, `images/`, and `checkpoints/` from Git. QLoRA requires compatible CUDA/PyTorch/Transformers/PEFT/bitsandbytes versions in addition to the minimal CLIP requirements; no fully pinned QLoRA environment is currently provided.
 
 ## Retrieval visualizations
 
@@ -167,7 +209,7 @@ Text  -> pretrained CLIP text encoder   (frozen) -> text_projection   (trainable
                                      logit_scale (trainable)
 ```
 
-Final checked-in `finetune_clip.py` configuration:
+Final checked-in `experiments/clip/finetune_clip.py` configuration:
 
 | Setting | Value |
 |:--|:--|
@@ -184,42 +226,6 @@ Final checked-in `finetune_clip.py` configuration:
 | Checkpoint criterion | Mean of validation I2T/T2I R@1 |
 
 Small-batch contrastive learning has few in-batch negatives; gradient accumulation alone does not create additional in-batch negative examples. The final 16-pair run used more negatives than the earlier two-pair runs.
-
-## Repository layout
-
-```text
-CILP/
-├── clip_align/
-│   ├── model.py              # ResNet18/DistilBERT encoders and InfoNCE
-│   ├── data.py               # Paired image-text dataset
-│   └── evaluation.py         # Bidirectional recall
-├── prepare_data.py           # Flickr8k -> single-caption CSV + images
-├── train.py                  # Train minimal CLIP-style projection heads
-├── evaluate.py               # Evaluate minimal model checkpoint
-├── clip_baseline.py          # Pretrained CLIP validation baseline
-├── finetune_clip.py          # Pretrained CLIP projection-head adaptation
-├── test_clip.py              # Held-out original vs fine-tuned evaluation
-├── visualize_clip.py         # Curves, comparisons, heatmaps, top-5 retrieval
-├── prepare_docvqa.py         # DocVQA 300/50 split and JSONL
-├── train_qlora.py            # Qwen3-VL 4-bit LoRA training; --rank 4/8/16
-├── evaluate_docvqa.py        # DocVQA EM/ANLS; --adapter-path
-├── compare_docvqa.py         # Historical DocVQA error comparison
-├── prepare_sft_data.py       # Earlier Flickr8k caption SFT data
-├── evaluate_qlora.py         # Caption evaluation with historical adapter
-├── analyze_qlora.py          # Caption response-length analysis
-├── analyze_errors.py         # Caption CLIP-based error analysis
-├── evaluate_clipscore.py     # Caption CLIP cosine-similarity diagnostic
-├── examples/pairs.csv        # CSV schema example (not image data)
-├── results/
-│   ├── clip_baseline.csv
-│   ├── final_test.csv
-│   ├── docvqa/              # Earlier predictions + rank summary
-│   └── qlora_*.csv          # Caption metrics, predictions, diagnostics
-├── assets/                   # README visualization PNGs
-└── requirements.txt
-```
-
-The full Flickr8k/DocVQA image datasets and trained model checkpoints/adapters are not committed; prepare/download them locally. Reported historical CSVs and retrieval visualizations **are** committed. Newly run rank-sweep per-example predictions still need to be pushed from the experiment machine.
 
 ## Reproduce
 
@@ -244,7 +250,7 @@ There is no official separate `transformers-gpu` package: CUDA support comes fro
 ### 2. Prepare Flickr8k
 
 ```powershell
-python prepare_data.py
+python -m experiments.clip.prepare_data
 ```
 
 The script reads Hugging Face dataset `intro/flickr8k`, uses the `train`, `dev`, and `test` splits, and keeps `caption_0` for each image. It saves `images/<split>_<index>.jpg` and `data/train.csv`, `data/val.csv`, `data/test.csv` with CSV columns `image,caption`. Expect approximately 6,000 / 1,000 / 1,000 pairs. The data must be downloaded separately.
@@ -252,25 +258,25 @@ The script reads Hugging Face dataset `intro/flickr8k`, uses the `train`, `dev`,
 ### 3. Minimal alignment experiment
 
 ```powershell
-python train.py --train-csv data/train.csv --val-csv data/val.csv --image-dir images --batch-size 4 --epochs 5
-python evaluate.py --checkpoint checkpoints/best.pt --val-csv data/test.csv --image-dir images
+python -m experiments.clip.train --train-csv data/train.csv --val-csv data/val.csv --image-dir images --batch-size 4 --epochs 5
+python -m experiments.clip.evaluate --checkpoint checkpoints/best.pt --val-csv data/test.csv --image-dir images
 ```
 
-`train.py` also supports `--resume checkpoints/best.pt`; if the checkpoint contains optimizer state, that is restored too. `--epochs` means **additional epochs** when resuming. The checkpoint tracks the **best validation** epoch, not necessarily the latest epoch.
+`experiments/clip/train.py` also supports `--resume checkpoints/best.pt`; if the checkpoint contains optimizer state, that is restored too. `--epochs` means **additional epochs** when resuming. The checkpoint tracks the **best validation** epoch, not necessarily the latest epoch.
 
 ### 4. Pretrained CLIP and fine-tuning
 
 ```powershell
-python clip_baseline.py
-python finetune_clip.py
-python test_clip.py
-python visualize_clip.py
+python -m experiments.clip.clip_baseline
+python -m experiments.clip.finetune_clip
+python -m experiments.clip.test_clip
+python -m experiments.clip.visualize_clip
 ```
 
-- `clip_baseline.py` evaluates on **validation**, not test.
-- `finetune_clip.py` saves a Hugging Face model and processor at `checkpoints/clip_finetune/best`.
-- `test_clip.py` evaluates **both** original and fine-tuned CLIP on the same held-out **test** split and writes `results/final_test.csv`.
-- `visualize_clip.py` saves plots in `results/visualization/`; the checked-in script contains the recorded five-epoch history and test numbers for its charts. Rerun retrieval for the heatmap and examples.
+- `experiments/clip/clip_baseline.py` evaluates on **validation**, not test.
+- `experiments/clip/finetune_clip.py` saves a Hugging Face model and processor at `checkpoints/clip_finetune/best`.
+- `experiments/clip/test_clip.py` evaluates **both** original and fine-tuned CLIP on the same held-out **test** split and writes `results/final_test.csv`.
+- `experiments/clip/visualize_clip.py` saves plots in `results/visualization/`; the checked-in script contains the recorded five-epoch history and test numbers for its charts. Rerun retrieval for the heatmap and examples.
 - Fine-tuning starts from the original pretrained CLIP when re-executed; this script **does not support optimizer-state resume**.
 
 **Note:** Load/preprocessing behavior and hardware compatibility depend on installed PyTorch/Transformers versions. Store exact package versions and random seeds before a formal replication study.
